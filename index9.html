@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rescuebot Control</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #e0d7f0; /* Lavender background */
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      color: #333;
+    }
+
+    /* Video Stream */
+    #live-video {
+      width: 35%; /* Increased size by 10% */
+      height: auto;
+      border: 2px solid #6a4c9c;
+      border-radius: 8px;
+      margin-top: 30px; /* Added margin to move video down a bit */
+      margin-bottom: 10px;
+    }
+
+    /* Widgets container (Map and Distance) */
+    .widgets-container {
+      display: flex;
+      justify-content: center; /* Centering the widgets */
+      width: 70%;
+      margin-bottom: 10px;
+      gap: 0; /* Removed gap */
+      padding: 0; /* Removed padding to ensure no space between them */
+    }
+
+    #map, #distance-widget {
+      width: 21.5%; /* Increased size by 10% more */
+      height: 176px; /* Increased height by 10% more */
+      border: 2px solid #6a4c9c;
+      border-radius: 8px;
+    }
+
+    #distance-widget {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 18px;
+      font-weight: bold;
+      background-color: #d1c6e1;
+    }
+
+    /* Control buttons container */
+    .control-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+      margin-top: 10px;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 25px;
+    }
+
+    /* Style for control buttons (20% larger) */
+    .control-buttons button {
+      padding: 60px; /* Increased button size by 20% */
+      font-size: 48px; /* Larger font size */
+      border: none;
+      background-color: #6a4c9c;
+      color: white;
+      border-radius: 50%;
+      width: 200px; /* 20% larger button size */
+      height: 200px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .control-buttons button:hover {
+      background-color: #5a3e88;
+      transform: scale(1.1);
+    }
+
+    .control-buttons button:active {
+      background-color: #4a2f74;
+    }
+
+    .control-buttons .stop-btn {
+      background-color: #d9534f; /* Red for Stop button */
+    }
+
+    .stop-btn:hover {
+      background-color: #c9302c;
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- Video Stream -->
+  <video id="live-video" autoplay>
+    <source id="video-source" type="video/mp4">
+    Your browser does not support the video tag.
+  </video>
+
+  <!-- Widgets (Map and Distance) -->
+  <div class="widgets-container">
+    <div id="map"></div>
+    <div id="distance-widget">
+      Distance: <span id="distance-value">N/A</span> cm
+    </div>
+  </div>
+
+  <!-- Control Buttons -->
+  <div class="control-container">
+    <div class="button-row">
+      <button id="up-btn" class="control-buttons">↑</button>
+    </div>
+    <div class="button-row">
+      <button id="left-btn" class="control-buttons">←</button>
+      <button id="stop-btn" class="control-buttons stop-btn">■</button>
+      <button id="right-btn" class="control-buttons">→</button>
+    </div>
+    <div class="button-row">
+      <button id="down-btn" class="control-buttons">↓</button>
+    </div>
+  </div>
+
+  <script>
+    // Replace with your ESP32-CAM's IP address for video streaming
+    const videoStreamUrl = 'http://192.168.1.100/stream'; // Example IP, change it
+    document.getElementById('video-source').src = videoStreamUrl;
+
+    // Initialize Map
+    let map;
+    let marker;
+    function initMap() {
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 0, lng: 0 }, // Default position
+        zoom: 15,
+      });
+      marker = new google.maps.Marker({
+        position: { lat: 0, lng: 0 },
+        map: map,
+      });
+    }
+
+    // Update the map with new GPS coordinates from ESP32-CAM
+    function updateMap(lat, lng) {
+      const position = { lat: lat, lng: lng };
+      marker.setPosition(position);
+      map.setCenter(position);
+    }
+
+    // Fetch GPS coordinates from ESP32 and update the map
+    function fetchLocation() {
+      fetch('http://<ESP32_IP>/get-gps') // Replace with ESP32 IP and endpoint
+        .then(response => response.json())
+        .then(data => {
+          const lat = data.latitude;
+          const lng = data.longitude;
+          updateMap(lat, lng);
+        })
+        .catch(error => console.log('Error fetching GPS:', error));
+    }
+
+    // Fetch the location every 2 seconds
+    setInterval(fetchLocation, 2000);
+
+    // Control Buttons functionality
+    document.getElementById('up-btn').addEventListener('click', () => {
+      fetch('http://<ESP32_IP>/move/forward');
+    });
+    document.getElementById('down-btn').addEventListener('click', () => {
+      fetch('http://<ESP32_IP>/move/backward');
+    });
+    document.getElementById('left-btn').addEventListener('click', () => {
+      fetch('http://<ESP32_IP>/move/left');
+    });
+    document.getElementById('right-btn').addEventListener('click', () => {
+      fetch('http://<ESP32_IP>/move/right');
+    });
+    document.getElementById('stop-btn').addEventListener('click', () => {
+      fetch('http://<ESP32_IP>/move/stop');
+    });
+  </script>
+
+  <!-- Google Maps API -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap" async defer></script>
+
+</body>
+</html>
